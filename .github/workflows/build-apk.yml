@@ -28,6 +28,23 @@ jobs:
           packages: 'platform-tools'
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Fix unsupported Bluetooth settings constant
+        shell: bash
+        run: |
+          FILE="app/src/main/java/com/aurora/ioslauncher/LauncherActivity.java"
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: Expected source file not found: $FILE"
+            echo "Current directory: $PWD"
+            find app/src/main/java -name 'LauncherActivity.java' -print || true
+            exit 1
+          fi
+          sed -i 's/Settings\.Panel\.ACTION_BLUETOOTH/Settings.ACTION_BLUETOOTH_SETTINGS/g' "$FILE"
+          echo "Bluetooth settings references after patch:"
+          grep -n 'ACTION_BLUETOOTH' "$FILE" || true
+          if grep -q 'Settings.Panel.ACTION_BLUETOOTH' "$FILE"; then
+            echo "ERROR: Unsupported Bluetooth constant is still present."
+            exit 1
+          fi
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
       - name: Upload APK artifact
